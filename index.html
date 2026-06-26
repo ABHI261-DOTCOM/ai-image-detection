@@ -1,0 +1,265 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Image Detector</title>
+
+<style>
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:'Segoe UI',sans-serif;
+}
+
+body{
+    min-height:100vh;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    background:
+        radial-gradient(circle at top left,#4f46e5,#0f172a 40%),
+        radial-gradient(circle at bottom right,#06b6d4,#111827 40%);
+    overflow:hidden;
+}
+
+.container{
+    width:450px;
+    padding:35px;
+    border-radius:25px;
+    background:rgba(255,255,255,0.08);
+    backdrop-filter:blur(15px);
+    border:1px solid rgba(255,255,255,0.15);
+    box-shadow:
+        0 10px 40px rgba(0,0,0,0.4),
+        0 0 50px rgba(99,102,241,0.2);
+    text-align:center;
+    color:white;
+    animation:fadeIn 0.8s ease;
+}
+
+h1{
+ h1{
+    font-size:2rem;
+    margin-bottom:10px;
+    background:linear-gradient(90deg,#60a5fa,#a855f7);
+
+    background-clip:text;
+    -webkit-background-clip:text;
+
+    color:transparent;
+    -webkit-text-fill-color:transparent;
+}
+}
+
+.subtitle{
+    color:#cbd5e1;
+    margin-bottom:25px;
+    font-size:14px;
+}
+
+.file-box{
+    border:2px dashed rgba(255,255,255,0.25);
+    padding:20px;
+    border-radius:15px;
+    margin-bottom:20px;
+    background:rgba(255,255,255,0.04);
+}
+
+input[type="file"]{
+    width:100%;
+    color:white;
+    cursor:pointer;
+}
+
+img{
+    width:100%;
+    margin-top:15px;
+    border-radius:15px;
+    display:none;
+    box-shadow:0 10px 25px rgba(0,0,0,0.4);
+    transition:0.4s;
+}
+
+img:hover{
+    transform:scale(1.02);
+}
+
+button{
+    width:100%;
+    padding:14px;
+    border:none;
+    border-radius:14px;
+    font-size:16px;
+    font-weight:bold;
+    color:white;
+    cursor:pointer;
+    background:linear-gradient(135deg,#6366f1,#8b5cf6);
+    box-shadow:0 5px 20px rgba(99,102,241,0.4);
+    transition:0.3s;
+}
+
+button:hover{
+    transform:translateY(-3px);
+    box-shadow:0 10px 30px rgba(99,102,241,0.6);
+}
+
+button:active{
+    transform:scale(0.98);
+}
+
+#loading{
+    display:none;
+    margin-top:20px;
+    color:#93c5fd;
+}
+
+#result{
+    margin-top:20px;
+    padding:15px;
+    border-radius:15px;
+    background:rgba(255,255,255,0.05);
+    border:1px solid rgba(255,255,255,0.1);
+    display:none;
+}
+
+.real{
+    color:#22c55e;
+    font-size:20px;
+    font-weight:bold;
+}
+
+.fake{
+    color:#ef4444;
+    font-size:20px;
+    font-weight:bold;
+}
+
+.confidence{
+    margin-top:8px;
+    color:#d1d5db;
+}
+
+@keyframes fadeIn{
+    from{
+        opacity:0;
+        transform:translateY(20px);
+    }
+    to{
+        opacity:1;
+        transform:translateY(0);
+    }
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <h1>🤖 AI Image Detector</h1>
+
+    <p class="subtitle">
+        Upload an image and let AI determine whether it is real or AI-generated.
+    </p>
+
+    <div class="file-box">
+        <input type="file" id="fileInput" accept="image/*">
+    </div>
+
+    <img id="preview">
+
+    <button onclick="upload()">Analyze Image</button>
+
+    <div id="loading">
+        🔍 Analyzing image...
+    </div>
+
+    <div id="result"></div>
+
+</div>
+
+<script>
+
+document.getElementById("fileInput").onchange = function(e){
+
+    const file = e.target.files[0];
+
+    if(!file) return;
+
+    const preview = document.getElementById("preview");
+
+    preview.src = URL.createObjectURL(file);
+    preview.style.display = "block";
+};
+
+async function upload(){
+
+    const file = document.getElementById("fileInput").files[0];
+
+    if(!file){
+        alert("Please select an image first.");
+        return;
+    }
+
+    const loading = document.getElementById("loading");
+    const result = document.getElementById("result");
+
+    loading.style.display = "block";
+    result.style.display = "none";
+
+    let formData = new FormData();
+    formData.append("file", file);
+
+    try{
+
+        const response = await fetch("http://127.0.0.1:8000/detect",{
+            method:"POST",
+            body:formData
+        });
+
+        const data = await response.json();
+
+        loading.style.display = "none";
+        result.style.display = "block";
+
+        const className =
+            data.result.toLowerCase().includes("fake") ||
+            data.result.toLowerCase().includes("ai")
+            ? "fake"
+            : "real";
+
+        result.innerHTML = `
+            <div class="${className}">
+                ${data.result}
+            </div>
+
+            <div class="confidence">
+                Confidence: ${data.confidence}%
+            </div>
+        `;
+
+    }catch(error){
+
+        loading.style.display = "none";
+        result.style.display = "block";
+
+        result.innerHTML = `
+            <div class="fake">
+                Server Error
+            </div>
+            <div class="confidence">
+                Unable to connect to FastAPI backend.
+            </div>
+        `;
+
+        console.error(error);
+    }
+}
+</script>
+
+</body>
+</html>
+
